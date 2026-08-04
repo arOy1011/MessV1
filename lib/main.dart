@@ -13,6 +13,15 @@ Future<void> main() async {
   runApp(const MessApp());
 }
 
+bool _isSupabaseReady() {
+  try {
+    Supabase.instance.client;
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
 class MessApp extends StatelessWidget {
   const MessApp({super.key});
 
@@ -38,6 +47,14 @@ class AuthGate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (!_isSupabaseReady()) {
+      return const Scaffold(
+        body: Center(
+          child: Text('Mess'),
+        ),
+      );
+    }
+
     return StreamBuilder<AuthState>(
       stream: Supabase.instance.client.auth.onAuthStateChange,
       builder: (context, snapshot) {
@@ -73,6 +90,14 @@ class _ManagerGateState extends State<ManagerGate> {
   }
 
   Future<void> _checkManager() async {
+    if (!_isSupabaseReady()) {
+      setState(() {
+        _loading = false;
+        _isManager = false;
+      });
+      return;
+    }
+
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) {
       setState(() {
