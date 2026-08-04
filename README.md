@@ -17,9 +17,6 @@ For help getting started with Flutter development, view the
 samples, guidance on mobile development, and a full API reference.
 
 # MessV1
-<<<<<<< HEAD
 
 this is the trial version of this mess app
-=======
 git push origin master
->>>>>>> b9c8afc (Save local Mess app changes)
