@@ -20,3 +20,4 @@ samples, guidance on mobile development, and a full API reference.
 
 this is the trial version of this mess app
 git push origin master
+autosync test
