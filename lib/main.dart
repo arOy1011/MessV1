@@ -6,9 +6,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Supabase.initialize(
-    url: 'https://ponnkkjzcozgabonofgv.supabase.co',
-    anonKey: 'sb_publishable_9HRSxixreMi2ur95tp3_9w_QXoftkTD',
-  );
+  url: 'https://sajmiqoaufrugwpnaekn.supabase.co',
+  anonKey: 'PASTE_THE_FULL_PUBLISHABLE_KEY_HERE',
+);
 
   runApp(const MessApp());
 }
