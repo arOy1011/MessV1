@@ -322,7 +322,7 @@ class _ManagerMembershipRequestsPageState
             batch_year,
             status,
             created_at,
-            profiles (
+            profiles!mess_memberships_user_id_fkey (
               full_name
             ),
             member_types (
