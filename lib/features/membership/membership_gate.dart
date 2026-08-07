@@ -4,6 +4,7 @@ import '../../services/auth_service.dart';
 import '../../services/mess_service.dart';
 import '../home/home_page.dart';
 import 'pending_approval_page.dart';
+import '../manager/manager_dashboard_page.dart';
 
 class MembershipGate extends StatefulWidget {
   const MembershipGate({
