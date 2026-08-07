@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../services/mess_service.dart';
 import '../home/home_page.dart';
-import 'pending_approval_page.dart';
 import '../manager/manager_dashboard_page.dart';
+import 'pending_approval_page.dart';
 
 class MembershipGate extends StatefulWidget {
   const MembershipGate({
@@ -46,10 +46,42 @@ class _MembershipGateState extends State<MembershipGate> {
       final membership =
           await MessService.getMessMembership(user.id);
 
+      Map<String, dynamic>? managerAssignment;
+
+      // Only check manager status for active members.
+      if (membership != null &&
+          (membership['status'] ?? '')
+                  .toString()
+                  .toLowerCase() ==
+              'active') {
+        final messId = membership['mess_id']?.toString();
+
+        if (messId != null && messId.isNotEmpty) {
+          // Find the current mess month.
+          final messMonth =
+              await MessService.getCurrentMessMonth(messId);
+
+          final messMonthId =
+              messMonth?['id']?.toString();
+
+          if (messMonthId != null &&
+              messMonthId.isNotEmpty) {
+            // Check whether this user is a manager
+            // for the current mess month.
+            managerAssignment =
+                await MessService.getActiveManagerAssignment(
+              userId: user.id,
+              messMonthId: messMonthId,
+            );
+          }
+        }
+      }
+
       if (!mounted) return;
 
       setState(() {
         _membership = membership;
+        _managerAssignment = managerAssignment;
         _loading = false;
         _error = null;
       });
@@ -79,6 +111,7 @@ class _MembershipGateState extends State<MembershipGate> {
           title: const Text('MessMate'),
           actions: [
             IconButton(
+              tooltip: 'Sign out',
               onPressed: AuthService.signOut,
               icon: const Icon(Icons.logout_rounded),
             ),
@@ -127,6 +160,7 @@ class _MembershipGateState extends State<MembershipGate> {
       );
     }
 
+    // User has no mess membership yet.
     if (_membership == null) {
       return MembershipApplicationPage(
         profile: widget.profile,
@@ -135,10 +169,23 @@ class _MembershipGateState extends State<MembershipGate> {
     }
 
     final status =
-        (_membership!['status'] ?? '').toString().toLowerCase();
+        (_membership!['status'] ?? '')
+            .toString()
+            .toLowerCase();
 
     switch (status) {
       case 'active':
+
+        // Manager for current mess month.
+        if (_managerAssignment != null) {
+          return ManagerDashboardPage(
+            profile: widget.profile,
+            membership: _membership!,
+            managerAssignment: _managerAssignment!,
+          );
+        }
+
+        // Normal active member.
         return HomePage(
           profile: widget.profile,
           membership: _membership!,
@@ -189,8 +236,11 @@ class MembershipApplicationPage extends StatefulWidget {
 
 class _MembershipApplicationPageState
     extends State<MembershipApplicationPage> {
-  final _studentIdController = TextEditingController();
-  final _batchYearController = TextEditingController();
+  final _studentIdController =
+      TextEditingController();
+
+  final _batchYearController =
+      TextEditingController();
 
   bool _loading = true;
   bool _submitting = false;
@@ -218,7 +268,8 @@ class _MembershipApplicationPageState
 
   Future<void> _loadMesses() async {
     try {
-      final messes = await MessService.getActiveMesses();
+      final messes =
+          await MessService.getActiveMesses();
 
       if (!mounted) return;
 
@@ -236,7 +287,9 @@ class _MembershipApplicationPageState
     }
   }
 
-  Future<void> _selectMess(String? messId) async {
+  Future<void> _selectMess(
+    String? messId,
+  ) async {
     setState(() {
       _selectedMessId = messId;
       _selectedMemberTypeId = null;
@@ -246,7 +299,8 @@ class _MembershipApplicationPageState
     if (messId == null) return;
 
     try {
-      final types = await MessService.getMemberTypes(messId);
+      final types =
+          await MessService.getMemberTypes(messId);
 
       if (!mounted) return;
 
@@ -267,7 +321,12 @@ class _MembershipApplicationPageState
   Future<void> _submit() async {
     final user = AuthService.currentUser;
 
-    if (user == null) return;
+    if (user == null) {
+      _showMessage(
+        'No authenticated user found.',
+      );
+      return;
+    }
 
     if (_selectedMessId == null) {
       _showMessage('Select your mess.');
@@ -279,7 +338,8 @@ class _MembershipApplicationPageState
       return;
     }
 
-    final studentId = _studentIdController.text.trim();
+    final studentId =
+        _studentIdController.text.trim();
 
     if (studentId.isEmpty) {
       _showMessage('Enter your student ID.');
@@ -287,22 +347,29 @@ class _MembershipApplicationPageState
     }
 
     final batchYear =
-        int.tryParse(_batchYearController.text.trim());
+        int.tryParse(
+          _batchYearController.text.trim(),
+        );
 
     if (batchYear == null ||
         batchYear < 1900 ||
         batchYear > 2100) {
-      _showMessage('Enter a valid batch year.');
+      _showMessage(
+        'Enter a valid batch year.',
+      );
       return;
     }
 
-    setState(() => _submitting = true);
+    setState(() {
+      _submitting = true;
+    });
 
     try {
       await MessService.createMembership(
         messId: _selectedMessId!,
         userId: user.id,
-        memberTypeId: _selectedMemberTypeId!,
+        memberTypeId:
+            _selectedMemberTypeId!,
         studentId: studentId,
         batchYear: batchYear,
       );
@@ -312,7 +379,9 @@ class _MembershipApplicationPageState
       _showMessage(error.toString());
     } finally {
       if (mounted) {
-        setState(() => _submitting = false);
+        setState(() {
+          _submitting = false;
+        });
       }
     }
   }
@@ -321,7 +390,9 @@ class _MembershipApplicationPageState
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+      SnackBar(
+        content: Text(message),
+      ),
     );
   }
 
@@ -350,7 +421,9 @@ class _MembershipApplicationPageState
           IconButton(
             tooltip: 'Sign out',
             onPressed: AuthService.signOut,
-            icon: const Icon(Icons.logout_rounded),
+            icon: const Icon(
+              Icons.logout_rounded,
+            ),
           ),
         ],
       ),
@@ -359,9 +432,13 @@ class _MembershipApplicationPageState
           padding: const EdgeInsets.all(24),
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
+              constraints:
+                  const BoxConstraints(
+                maxWidth: 480,
+              ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+                crossAxisAlignment:
+                    CrossAxisAlignment.stretch,
                 children: [
                   Text(
                     'Mess membership',
@@ -369,7 +446,8 @@ class _MembershipApplicationPageState
                         .textTheme
                         .headlineSmall
                         ?.copyWith(
-                          fontWeight: FontWeight.w700,
+                          fontWeight:
+                              FontWeight.w700,
                         ),
                   ),
 
@@ -382,82 +460,106 @@ class _MembershipApplicationPageState
                   const SizedBox(height: 28),
 
                   DropdownButtonFormField<String>(
-                    initialValue: _selectedMessId,
-                    decoration: const InputDecoration(
+                    initialValue:
+                        _selectedMessId,
+                    decoration:
+                        const InputDecoration(
                       labelText: 'Mess',
-                      prefixIcon:
-                          Icon(Icons.restaurant_rounded),
+                      prefixIcon: Icon(
+                        Icons.restaurant_rounded,
+                      ),
                     ),
                     items: _messes.map((mess) {
                       return DropdownMenuItem<String>(
-                        value: mess['id'].toString(),
+                        value:
+                            mess['id'].toString(),
                         child: Text(
-                          mess['name']?.toString() ?? 'Mess',
+                          mess['name']
+                                  ?.toString() ??
+                              'Mess',
                         ),
                       );
                     }).toList(),
-                    onChanged:
-                        _submitting ? null : _selectMess,
+                    onChanged: _submitting
+                        ? null
+                        : _selectMess,
                   ),
 
                   const SizedBox(height: 16),
 
                   DropdownButtonFormField<String>(
-                    initialValue: _selectedMemberTypeId,
-                    decoration: const InputDecoration(
+                    initialValue:
+                        _selectedMemberTypeId,
+                    decoration:
+                        const InputDecoration(
                       labelText: 'Member type',
-                      prefixIcon:
-                          Icon(Icons.category_outlined),
+                      prefixIcon: Icon(
+                        Icons.category_outlined,
+                      ),
                     ),
-                    items: _memberTypes.map((type) {
+                    items:
+                        _memberTypes.map((type) {
                       return DropdownMenuItem<String>(
-                        value: type['id'].toString(),
+                        value:
+                            type['id'].toString(),
                         child: Text(
-                          type['name']?.toString() ??
+                          type['name']
+                                  ?.toString() ??
                               'Member',
                         ),
                       );
                     }).toList(),
-                    onChanged: _selectedMessId == null ||
-                            _submitting
-                        ? null
-                        : (value) {
-                            setState(() {
-                              _selectedMemberTypeId = value;
-                            });
-                          },
+                    onChanged:
+                        _selectedMessId == null ||
+                                _submitting
+                            ? null
+                            : (value) {
+                                setState(() {
+                                  _selectedMemberTypeId =
+                                      value;
+                                });
+                              },
                   ),
 
                   const SizedBox(height: 16),
 
                   TextField(
-                    controller: _studentIdController,
-                    textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(
+                    controller:
+                        _studentIdController,
+                    textInputAction:
+                        TextInputAction.next,
+                    decoration:
+                        const InputDecoration(
                       labelText: 'Student ID',
-                      prefixIcon:
-                          Icon(Icons.badge_outlined),
+                      prefixIcon: Icon(
+                        Icons.badge_outlined,
+                      ),
                     ),
                   ),
 
                   const SizedBox(height: 16),
 
                   TextField(
-                    controller: _batchYearController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
+                    controller:
+                        _batchYearController,
+                    keyboardType:
+                        TextInputType.number,
+                    decoration:
+                        const InputDecoration(
                       labelText: 'Batch year',
                       hintText: 'e.g. 2024',
-                      prefixIcon:
-                          Icon(Icons.school_outlined),
+                      prefixIcon: Icon(
+                        Icons.school_outlined,
+                      ),
                     ),
                   ),
 
                   const SizedBox(height: 24),
 
                   FilledButton(
-                    onPressed:
-                        _submitting ? null : _submit,
+                    onPressed: _submitting
+                        ? null
+                        : _submit,
                     child: Padding(
                       padding:
                           const EdgeInsets.symmetric(
@@ -487,7 +589,8 @@ class _MembershipApplicationPageState
   }
 }
 
-class MembershipUnavailablePage extends StatelessWidget {
+class MembershipUnavailablePage
+    extends StatelessWidget {
   const MembershipUnavailablePage({
     super.key,
     required this.title,
@@ -504,8 +607,11 @@ class MembershipUnavailablePage extends StatelessWidget {
         title: const Text('MessMate'),
         actions: [
           IconButton(
+            tooltip: 'Sign out',
             onPressed: AuthService.signOut,
-            icon: const Icon(Icons.logout_rounded),
+            icon: const Icon(
+              Icons.logout_rounded,
+            ),
           ),
         ],
       ),
@@ -524,7 +630,8 @@ class MembershipUnavailablePage extends StatelessWidget {
                 title,
                 style: const TextStyle(
                   fontSize: 22,
-                  fontWeight: FontWeight.w700,
+                  fontWeight:
+                      FontWeight.w700,
                 ),
                 textAlign: TextAlign.center,
               ),
