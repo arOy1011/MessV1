@@ -23,6 +23,7 @@ class _MembershipGateState extends State<MembershipGate> {
   String? _error;
 
   Map<String, dynamic>? _membership;
+  Map<String, dynamic>? _managerAssignment;
 
   @override
   void initState() {
