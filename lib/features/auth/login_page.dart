@@ -94,9 +94,10 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       final response = await Supabase.instance.client.auth.signUp(
-        email: email,
-        password: password,
-      );
+      email: email,
+      password: password,
+      emailRedirectTo: 'app.hostelmess.mess://login-callback',
+    );
 
       if (!mounted) return;
 
